@@ -40,19 +40,20 @@ const SHORT_SHA = await (async () => {
   }
 })()
 
+const PKG_VERSION = await Bun.file(path.resolve(import.meta.dir, "../../opencode/package.json"))
+  .json()
+  .then((data: any) => data.version)
+
 const VERSION = await (async () => {
   if (env.MIMOCODE_VERSION) return env.MIMOCODE_VERSION
   if (IS_PREVIEW) {
-    if (SHORT_SHA) return `0.0.0-${CHANNEL}-${SHORT_SHA}`
+    if (SHORT_SHA) return `${PKG_VERSION}-${CHANNEL}-${SHORT_SHA}`
     const ts = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 12)
-    return `0.0.0-${CHANNEL}-${ts}`
+    return `${PKG_VERSION}-${CHANNEL}-${ts}`
   }
-  const version = await Bun.file(path.resolve(import.meta.dir, "../../opencode/package.json"))
-    .json()
-    .then((data: any) => data.version)
   const t = env.MIMOCODE_BUMP?.toLowerCase()
-  if (!t) return version
-  const [major, minor, patch] = version.split(".").map((x: string) => Number(x) || 0)
+  if (!t) return PKG_VERSION
+  const [major, minor, patch] = PKG_VERSION.split(".").map((x: string) => Number(x) || 0)
   if (t === "major") return `${major + 1}.0.0`
   if (t === "minor") return `${major}.${minor + 1}.0`
   return `${major}.${minor}.${patch + 1}`
