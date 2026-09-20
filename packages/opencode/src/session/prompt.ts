@@ -2326,7 +2326,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           sessionID,
           abort: taskAbort.signal,
           callID: part.callID,
-          extra: { bypassAgentCheck: true, promptOps },
+          // skipArgsValidation: taskArgs above is built here, not authored by the
+          // model, so the actor tool's model-facing `subagent_type` enum must not
+          // gate it. Without this, a command that runs as a subtask under the
+          // session's current agent (a primary — build, plan) is rejected by that
+          // enum with "Invalid option: expected one of general|explore" instead of
+          // dispatching. The agent is still resolved and existence-checked just
+          // below (agents.get), which is the check that actually matters here.
+          extra: { bypassAgentCheck: true, skipArgsValidation: true, promptOps },
           messages: msgs,
           metadata: (val: { title?: string; metadata?: Record<string, any> }) =>
             Effect.gen(function* () {

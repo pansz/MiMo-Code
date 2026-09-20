@@ -414,6 +414,48 @@ describe("tool.actor", () => {
     ),
   )
 
+  // A slash-command subtask names its agent in code, not by the model's choice —
+  // SessionPrompt.command falls back to the session's current agent, which is a
+  // primary (build, plan). The model-facing enum deliberately excludes those, so
+  // without `skipArgsValidation` the dispatch is rejected by the schema it can't
+  // satisfy: /review used to die with "Invalid option: expected one of
+  // general|explore" and never review anything.
+  it.live("a runtime-built dispatch may name an agent outside the model-facing enum", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        yield* installMockSpawn()
+        const { chat, assistant } = yield* seed()
+        const tool = yield* ActorTool
+        const def = yield* tool.init()
+
+        const args = {
+          operation: {
+            action: "run" as const,
+            description: "review the pending changes",
+            prompt: "review the pending changes",
+            subagent_type: "build",
+          },
+        }
+
+        // The enum is what the MODEL sees, and it still excludes primary agents.
+        expect(def.parameters.safeParse(args).success).toBe(false)
+
+        const result = yield* def.execute(args, {
+          sessionID: chat.id,
+          messageID: assistant.id,
+          agent: "build",
+          abort: new AbortController().signal,
+          extra: { bypassAgentCheck: true, skipArgsValidation: true },
+          messages: [],
+          metadata: () => Effect.void,
+          ask: () => Effect.void,
+        })
+
+        expect(result.output).toContain("actor_id:")
+      }),
+    ),
+  )
+
   it.live("execute creates a fresh actor under the parent session and reports its id", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {

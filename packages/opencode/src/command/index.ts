@@ -120,6 +120,14 @@ export const layer = Layer.effect(
       commands[Default.REVIEW] = {
         name: Default.REVIEW,
         description: "review changes [commit|branch|pr], defaults to uncommitted",
+        // The reviewer runs as an isolated subtask, so it needs a real subagent
+        // to run AS. Leaving `agent` unset makes the dispatcher fall back to the
+        // session's current agent (`build`/`plan` — both primary), which is not a
+        // valid actor target: the subtask fails with "Invalid option: expected one
+        // of general|explore" instead of reviewing anything. `general` is the
+        // full-capability subagent, and its completionGate gives the subtask the
+        // return-format contract the command block renders.
+        agent: "general",
         source: "command",
         get template() {
           return PROMPT_REVIEW.replace("${path}", ctx.worktree)
