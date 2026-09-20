@@ -2480,6 +2480,74 @@ it.live("loop injects the dynamic environment block only when the flag is set", 
   ),
 )
 
+const goCfg = (url: string) => {
+  const config = providerCfg(url)
+  return {
+    ...config,
+    provider: {
+      ...config.provider,
+      "opencode-go": {
+        ...config.provider.test,
+        id: "opencode-go",
+        options: { ...config.provider.test.options, baseURL: url },
+        models: { "test-model": config.provider.test.models["test-model"] },
+      },
+    },
+  }
+}
+
+it.live("sends opencode session headers for opencode providers", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const go = yield* sessions.create({
+        title: "Go session",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* prompt.prompt({
+        sessionID: go.id,
+        agent: "build",
+        model: { providerID: ProviderID.make("opencode-go"), modelID: ModelID.make("test-model") },
+        noReply: true,
+        parts: [{ type: "text", text: "hello" }],
+      })
+      yield* llm.text("world")
+      yield* prompt.loop({ sessionID: go.id })
+
+      const goHeaders = (yield* llm.requestHeaders).filter((h) => h["x-opencode-session"] === go.id)
+      expect(goHeaders.length).toBeGreaterThan(0)
+      for (const h of goHeaders) {
+        expect(typeof h["x-opencode-request"]).toBe("string")
+        expect(typeof h["x-opencode-project"]).toBe("string")
+        expect(h["x-opencode-client"]).toBeDefined()
+      }
+
+      const plain = yield* sessions.create({
+        title: "Plain session",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* prompt.prompt({
+        sessionID: plain.id,
+        agent: "build",
+        model: ref,
+        noReply: true,
+        parts: [{ type: "text", text: "hello" }],
+      })
+      yield* llm.text("world")
+      yield* prompt.loop({ sessionID: plain.id })
+
+      const plainHeaders = (yield* llm.requestHeaders).filter((h) => h["x-session-affinity"] === plain.id)
+      expect(plainHeaders.length).toBeGreaterThan(0)
+      for (const h of plainHeaders) {
+        expect(h["x-opencode-session"]).toBeUndefined()
+      }
+    }),
+    { git: true, config: goCfg },
+  ),
+  30_000,
+)
+
 it.live("static loop returns assistant text through local provider", () =>
   provideTmpdirServer(
     Effect.fnUntraced(function* ({ llm }) {

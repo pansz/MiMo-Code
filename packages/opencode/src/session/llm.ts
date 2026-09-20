@@ -25,7 +25,7 @@ import { ProjectID } from "@/project/schema"
 import { Auth } from "@/auth"
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@/installation/version"
-import { EffectBridge } from "@/effect"
+import { EffectBridge, InstanceState } from "@/effect"
 import { Global } from "@/global"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
@@ -593,6 +593,18 @@ const live: Layer.Layer<
         },
       )
 
+      // OpenCode Zen / Go (provider IDs prefixed "opencode") route and
+      // prompt-cache on the x-opencode-session header — requests without it can
+      // fail with "Model is unavailable". Keep the value stable per session so
+      // affinity survives across turns. Mirrors upstream opencode's
+      // LLMRequestPrep.prepare.
+      const isOpencodeProvider = input.model.providerID.startsWith("opencode")
+      const opencodeProjectID = isOpencodeProvider
+        ? yield* Effect.map(InstanceState.context, (ctx) => ctx.project.id).pipe(
+            Effect.catch(() => Effect.succeed(undefined)),
+          )
+        : undefined
+
       const tools = resolveTools(input)
       const requestedActiveTools = new Set(input.activeTools ?? Object.keys(tools))
       const activeTools = Object.keys(tools).filter((name) => name !== "invalid" && requestedActiveTools.has(name))
@@ -808,6 +820,14 @@ const live: Layer.Layer<
         abortSignal: input.abort,
         headers: {
           ...(!input.ephemeral ? { "x-session-affinity": input.sessionID } : {}),
+          ...(isOpencodeProvider
+            ? {
+                ...(opencodeProjectID ? { "x-opencode-project": opencodeProjectID } : {}),
+                "x-opencode-session": input.sessionID,
+                "x-opencode-request": input.user.id,
+                "x-opencode-client": Flag.MIMOCODE_CLIENT,
+              }
+            : {}),
           ...(!input.ephemeral && input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
           ...input.model.headers,
           ...headers,
