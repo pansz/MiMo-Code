@@ -116,18 +116,31 @@ function wrap<Parameters extends z.ZodType, Result extends Metadata>(
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
-          yield* Effect.try({
-            try: () => toolInfo.parameters.parse(args),
-            catch: (error) => {
-              // Bad arguments are always agent-recoverable: the model sees the
-              // message and rewrites the call next turn. Mark it so the TUI
-              // renders it muted instead of alarming the user with a red block.
-              if (error instanceof z.ZodError && toolInfo.formatValidationError) {
-                return new RecoverableError(toolInfo.formatValidationError(error), { cause: error })
-              }
-              return new RecoverableError(validationErrorMessage(id, error), { cause: error })
-            },
-          })
+          // `parameters` is the MODEL-facing contract: its enums — actor's
+          // `subagent_type` most of all — exist so the model's choices are
+          // discoverable and a hallucinated value is rejected. A dispatch whose
+          // args the RUNTIME built gains nothing from that gate and can only trip
+          // it on a field the model never chose, so `extra.skipArgsValidation`
+          // opts out. SessionPrompt.handleSubtask is the one producer: it marks
+          // the slash-command subtask it synthesizes, which is how a command like
+          // /review can name an agent the actor enum deliberately omits (its
+          // `subtask: true` runs under the session's current agent unless the
+          // command names one). Model-authored calls leave the flag unset and are
+          // validated exactly as before.
+          if (ctx.extra?.skipArgsValidation !== true) {
+            yield* Effect.try({
+              try: () => toolInfo.parameters.parse(args),
+              catch: (error) => {
+                // Bad arguments are always agent-recoverable: the model sees the
+                // message and rewrites the call next turn. Mark it so the TUI
+                // renders it muted instead of alarming the user with a red block.
+                if (error instanceof z.ZodError && toolInfo.formatValidationError) {
+                  return new RecoverableError(toolInfo.formatValidationError(error), { cause: error })
+                }
+                return new RecoverableError(validationErrorMessage(id, error), { cause: error })
+              },
+            })
+          }
           const result = yield* execute(args, ctx)
           if (result.metadata.truncated !== undefined) {
             return result
