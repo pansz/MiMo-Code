@@ -1,3 +1,4 @@
+import { HostModelTransport } from "./host-transport"
 import z from "zod"
 import os from "os"
 import fuzzysort from "fuzzysort"
@@ -1700,11 +1701,11 @@ const layer: Layer.Layer<
 
           const res = await Promise.resolve()
             .then(() =>
-              fetchFn(input, {
+              HostModelTransport.request(input, opts, () => fetchFn(input, {
                 ...opts,
                 // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
                 timeout: false,
-              }),
+              })),
             )
             .catch((error: unknown) => {
               requestTimeoutCtl?.clear()

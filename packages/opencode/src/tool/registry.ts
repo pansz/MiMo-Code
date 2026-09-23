@@ -35,13 +35,9 @@ import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util"
-import { errorMessage } from "@/util/error"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
-import { Glob } from "@mimo-ai/shared/util/glob"
-import path from "path"
-import { pathToFileURL } from "url"
 import { Effect, Layer, Context } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -75,6 +71,7 @@ import { BuiltinWorkflow } from "@/workflow/builtin"
 import { ToolScriptTool, renderToolScriptDeclarations } from "./tool-script"
 import { GPT_TOP_LEVEL_TOOLS, TOOL_SCRIPT_EXCLUDED, toolScriptRegistry } from "./tool-script-ref"
 import { type HarnessMode, usesGPTToolset } from "./gpt"
+import { defaultToolName, usesPascalCaseTools } from "./names"
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -216,28 +213,6 @@ export const layer = Layer.effect(
                   },
                 }
               }),
-          }
-        }
-
-        const dirs = yield* config.directories()
-        const matches = dirs.flatMap((dir) =>
-          Glob.scanSync("{tool,tools}/*.{js,ts}", { cwd: dir, absolute: true, dot: true, symlink: true }),
-        )
-        if (matches.length) yield* config.waitForDependencies()
-        for (const match of matches) {
-          const namespace = path.basename(match, path.extname(match))
-          // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
-          // Import it as `file://` so Node on Windows accepts the dynamic import.
-          const mod = yield* Effect.tryPromise({
-            try: () => import(`${pathToFileURL(match).href}?v=${Date.now()}`),
-            catch: (err) => err,
-          }).pipe(Effect.catch((err) => {
-            log.error("failed to load file tool, skipping", { path: match, error: errorMessage(err) })
-            return Effect.succeed(undefined)
-          }))
-          if (!mod) continue
-          for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
-            custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
           }
         }
 
@@ -473,6 +448,7 @@ export const layer = Layer.effect(
       includeHidden: boolean,
     ) {
       const availableTools = yield* available(input)
+      const pascal = usesPascalCaseTools(input.modelID, input.harness, input.apiModelID, input.family)
       const selected = availableTools.useGPTTools && !includeHidden
         ? availableTools.filtered.filter((tool) => GPT_TOP_LEVEL_TOOLS.has(tool.id))
         : availableTools.filtered
@@ -498,6 +474,7 @@ export const layer = Layer.effect(
           const description = useShell ? tool.shell!.description : output.description
           return {
             id: tool.id,
+            modelName: pascal ? defaultToolName(tool.id) : undefined,
             description: [
               description,
               tool.id === ReadTool.id ? yield* describeReadMedia(input) : undefined,

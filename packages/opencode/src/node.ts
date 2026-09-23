@@ -9,5 +9,6 @@ export { Database } from "./storage"
 export { JsonMigration } from "./storage"
 export { ChildProcessEnv } from "./util/child-process-env"
 export { HostMcp } from "./mcp/host"
+export { HostModelTransport } from "./provider/host-transport"
 /** Capability API tokens — single mint/verify source for embedders. */
 export { LLMServerTokens } from "./llm-server/tokens"

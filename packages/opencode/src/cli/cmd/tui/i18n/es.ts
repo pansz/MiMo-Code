@@ -161,8 +161,6 @@ export const dict = {
   "tui.tips.custom_formatter":
     "Define comandos de formateo personalizados por extensión de archivo en la configuración",
   "tui.tips.lsp": "MiMoCode usa servidores LSP para análisis inteligente de código",
-  "tui.tips.custom_tool":
-    "Crea archivos {highlight}.ts{/highlight} en {highlight}.mimocode/tools/{/highlight} para definir nuevas herramientas LLM",
   "tui.tips.tool_scripts":
     "Las definiciones de herramientas pueden invocar scripts en Python, Go, etc.",
   "tui.tips.plugins":
@@ -285,7 +283,6 @@ export const dict = {
   "tui.skill.pdf-official.description": "Crear, editar, transformar y leer archivos PDF",
   "tui.skill.pptx-official.description": "Crear, editar y leer presentaciones de Microsoft PowerPoint (.pptx)",
   "tui.skill.mimocode.description": "Autodocumentación de funciones, configuración y comandos de MiMoCode",
-  "tui.skill.evolve.description": "Reescribe cualquier capa de ti mismo — herramientas, hooks, conocimiento, workflows, incluso la UI",
   "tui.skill.loop.description": "Programar un prompt para ejecutarse en un intervalo recurrente",
   "tui.skill.html-to-video-pipeline.description": "El arma definitiva para vídeos cortos — crea vídeos cortos con HTML",
   "tui.skill.arxiv.description": "Busca, cita, descarga y sigue artículos de arXiv",

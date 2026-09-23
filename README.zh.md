@@ -239,7 +239,6 @@ MiMoCode 打包了以下内置技能：
 | `data-analytics` | 通过数据质量、KPI、仪表盘、报告、Notebook 和市场规模测算等工作流分析产品与业务数据 |
 | `deep-research` | 使用并行子智能体和内置 Web 工具生成带引用的多源深度调研报告 |
 | `docx-official` | 生成、读取和转换 Word (.docx) 文件 |
-| `evolve` | 全面自我修改——改写 Agent 的任意层面：工具、行为钩子、知识、工作流，乃至界面本身 |
 | `html-to-video-pipeline` | 通过无头浏览器 + ffmpeg 将 HTML 渲染为 MP4 |
 | `learn-everything` | 将文档、URL 或主题转化为包含练习、反馈和进度追踪的自适应课程 |
 | `loop` | 按固定周期调度循环提示 |
@@ -256,10 +255,10 @@ MiMoCode 打包了以下内置技能：
 
 `claude-code` 和 `codex` 仅在系统分别安装了 `claude` 和 `codex` 可执行文件时提供。其他技能也可能需要其说明中列出的任务专用工具。
 
-**覆盖内置技能：** 在项目（`.mimocode/skills/<name>/SKILL.md`）或个人技能目录（`~/.claude/skills/`、`~/.opencode/skills/` 等）中创建同名技能即可。扫描顺序中后发现的用户技能会覆盖同名的内置技能。
+**覆盖内置技能：** 在项目的 `.mimocode/skills/<name>/SKILL.md`，或个人技能目录（例如 `~/.config/mimocode/skills/<name>/SKILL.md`）里放同名技能即可。项目 `.agents/skills/` 与 `~/.agents/skills/` 这两处开放标准目录同样会扫到。扫描顺序靠后的用户技能会覆盖同名内置技能。
 
 <details>
-<summary><strong>通过环境变量禁用内置技能</strong></summary>
+<summary><strong>通过环境变量配置技能</strong></summary>
 
 | 变量 | 效果 |
 |------|------|
@@ -267,7 +266,18 @@ MiMoCode 打包了以下内置技能：
 | `MIMOCODE_DISABLE_OFFICIAL_SKILLS=true` | 仅禁用办公/媒体类技能：`docx-official`、`pdf-official`、`pptx-official`、`xlsx-official`、`html-to-video-pipeline` |
 | `MIMOCODE_DISABLE_SLASH_SKILLS=true` | 从 TUI 的 `/` 自动补全中隐藏 Skill，但不禁用它们 |
 
-前两个选项会将对应技能从 Agent 可用技能列表中完全移除——不会出现在上下文中，也无法被调用。`MIMOCODE_DISABLE_SLASH_SKILLS` 仅影响 TUI 自动补全，Skill 对 Agent 仍然可用。
+**外部技能根**（默认加载面 = `.mimocode` + 开放标准 `.agents`）：
+
+| Env | 默认 | 作用 |
+| --- | --- | --- |
+| `MIMOCODE_DISABLE_AGENTS_SKILLS=true` | 不设 = 开 | 关闭 `~/.agents/skills` 与项目 `.agents/skills` |
+| `MIMOCODE_ENABLE_CLAUDE_CODE_SKILLS=true` | 不设 = 关 | 打开 `.claude/skills` |
+| `MIMOCODE_ENABLE_CODEX_SKILLS=true` | 不设 = 关 | 打开 `.codex/skills`（仅用户 skill；Codex `skills/.system` 永不加载） |
+| `MIMOCODE_ENABLE_OPENCODE_SKILLS=true` | 不设 = 关 | 打开 `.opencode/skills` |
+
+外部扫描不匹配 `skills/` 下的点目录段。
+
+`MIMOCODE_DISABLE_BUILTIN_SKILLS` 与 `MIMOCODE_DISABLE_OFFICIAL_SKILLS` 会将对应技能从 Agent 可用技能列表中完全移除——不会出现在上下文中，也无法被调用。`MIMOCODE_DISABLE_SLASH_SKILLS` 仅影响 TUI 自动补全，Skill 对 Agent 仍然可用。
 
 </details>
 

@@ -248,7 +248,6 @@ MiMoCode bundles the following builtin skills:
 | `data-analytics` | Analyze product and business data through reusable workflows for data quality, KPIs, dashboards, reports, notebooks, and market sizing |
 | `deep-research` | Produce cited, multi-source research reports with parallel subagents and built-in web tools |
 | `docx-official` | Produce, read, and transform Word (.docx) files |
-| `evolve` | Total self-modification — rewrite any layer of the agent: tools, behavior hooks, knowledge, workflows, even the UI |
 | `html-to-video-pipeline` | HTML-to-MP4 rendering via headless browser + ffmpeg |
 | `learn-everything` | Turn documents, URLs, or topics into adaptive courses with exercises, feedback, and progress tracking |
 | `loop` | Schedule recurring prompts on a fixed cadence |
@@ -265,10 +264,10 @@ MiMoCode bundles the following builtin skills:
 
 `claude-code` and `codex` are exposed only when the `claude` and `codex` executables, respectively, are installed. Other skills may still require task-specific tools described in their instructions.
 
-**Overriding a builtin skill:** Create a skill with the same `name` in your project (`.mimocode/skills/<name>/SKILL.md`) or personal skill directory (`~/.claude/skills/`, `~/.opencode/skills/`, etc.). User skills discovered later in the scan order override builtins with the same name.
+**Overriding a builtin skill:** Create a skill with the same `name` under the project (`.mimocode/skills/<name>/SKILL.md`) or personal (for example `~/.config/mimocode/skills/<name>/SKILL.md`) MiMoCode skills directory. Open-standard `.agents/skills/` in the project and `~/.agents/skills/` are compatible discovery roots. User skills discovered later in the scan order override builtins with the same name.
 
 <details>
-<summary><strong>Disabling builtin skills via environment variables</strong></summary>
+<summary><strong>Configuring skills via environment variables</strong></summary>
 
 | Variable | Effect |
 |----------|--------|
@@ -276,7 +275,18 @@ MiMoCode bundles the following builtin skills:
 | `MIMOCODE_DISABLE_OFFICIAL_SKILLS=true` | Disable only the office/media skills: `docx-official`, `pdf-official`, `pptx-official`, `xlsx-official`, `html-to-video-pipeline` |
 | `MIMOCODE_DISABLE_SLASH_SKILLS=true` | Hide skills from TUI `/` autocomplete without disabling them |
 
-The first two options remove the corresponding skills from the agent's available skill list entirely — they will not appear in context and cannot be invoked. `MIMOCODE_DISABLE_SLASH_SKILLS` affects only TUI autocomplete; the skills remain available to agents.
+**External skill roots** (default surface is `.mimocode` + open-standard `.agents`):
+
+| Env | Default | Effect |
+| --- | --- | --- |
+| `MIMOCODE_DISABLE_AGENTS_SKILLS=true` | unset = on | Turn off `~/.agents/skills` and project `.agents/skills` |
+| `MIMOCODE_ENABLE_CLAUDE_CODE_SKILLS=true` | unset = off | Opt in `.claude/skills` |
+| `MIMOCODE_ENABLE_CODEX_SKILLS=true` | unset = off | Opt in `.codex/skills` (user skills only; Codex `skills/.system` is never loaded) |
+| `MIMOCODE_ENABLE_OPENCODE_SKILLS=true` | unset = off | Opt in `.opencode/skills` |
+
+External scans never match dotted path segments under `skills/`.
+
+`MIMOCODE_DISABLE_BUILTIN_SKILLS` and `MIMOCODE_DISABLE_OFFICIAL_SKILLS` remove the corresponding skills from the agent's available skill list entirely — they will not appear in context and cannot be invoked. `MIMOCODE_DISABLE_SLASH_SKILLS` affects only TUI autocomplete; the skills remain available to agents.
 
 </details>
 

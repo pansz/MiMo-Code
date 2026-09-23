@@ -126,8 +126,6 @@ export const dict: Record<string, string> = {
   "tui.tips.disable_formatter": 'Set {highlight}"formatter": false{/highlight} in config to disable all auto-formatting',
   "tui.tips.custom_formatter": "Define custom formatter commands with file extensions in config",
   "tui.tips.lsp": "MiMoCode uses LSP servers for intelligent code analysis",
-  "tui.tips.custom_tool":
-    "Create {highlight}.ts{/highlight} files in {highlight}.mimocode/tools/{/highlight} to define new LLM tools",
   "tui.tips.tool_scripts": "Tool definitions can invoke scripts written in Python, Go, etc",
   "tui.tips.plugins":
     "Add {highlight}.ts{/highlight} files to {highlight}.mimocode/plugin/{/highlight} for event hooks",
@@ -210,7 +208,6 @@ export const dict: Record<string, string> = {
   "tui.skill.pdf-official.description": "Create, edit, transform, and read PDF files",
   "tui.skill.pptx-official.description": "Create, edit, and read Microsoft PowerPoint (.pptx) decks",
   "tui.skill.mimocode.description": "Self-documentation for MiMoCode features, config, and commands",
-  "tui.skill.evolve.description": "Rewrite any layer of yourself — tools, behavior hooks, knowledge, workflows, even the UI",
   "tui.skill.loop.description": "Schedule a prompt to run on a recurring interval",
   "tui.skill.html-to-video-pipeline.description": "Short-video magic — make short videos with HTML",
   "tui.skill.arxiv.description": "Search, cite, download, and track arXiv papers",
@@ -571,6 +568,7 @@ export const dict: Record<string, string> = {
   // Session badges
   "tui.session.badge.auto": "Auto",
   "tui.session.actor_warning": "Warning",
+  "tui.session.inbox.from": "Message from {{from}}",
   "tui.session.actor_status.completed": "Subagent completed",
   "tui.session.actor_status.failed": "Subagent failed",
   "tui.session.actor_status.cancelled": "Subagent cancelled",

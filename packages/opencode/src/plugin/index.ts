@@ -12,6 +12,7 @@ import type {
 import { z } from "zod"
 import { matchesActor } from "./matcher"
 import { Config } from "../config"
+import { Global } from "../global"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { Log } from "../util"
@@ -431,7 +432,10 @@ export const layer = Layer.effect(
         const meta: HookEntry[] = []
         const files: Record<string, number> = {}
         yield* config.get()
-        const dirs = yield* config.directories()
+        // Exclude home-level file hooks from both initial discovery and reloads.
+        const dirs = (yield* config.directories()).filter(
+          (dir) => path.resolve(dir) !== path.resolve(Global.Path.home, ".mimocode"),
+        )
 
         for (const dir of dirs) {
           const matches = Glob.scanSync(FILE_HOOK_GLOB, { cwd: dir, absolute: true, dot: true, symlink: true })

@@ -10,6 +10,13 @@ import { orphanToolIdleSweepRef, assistantMessageIdsSnapshotRef } from "./orphan
 export interface Interface {
   readonly assertNotBusy: (sessionID: SessionID, agentID?: string) => Effect.Effect<void, Session.BusyError>
   readonly start: (sessionID: SessionID, agentID: string, onInterrupt: Effect.Effect<MessageV2.WithParts>, work: Effect.Effect<MessageV2.WithParts>) => Effect.Effect<void, Session.BusyError>
+  /** [C001] Start and return cancel bound to this run id only. */
+  readonly startOwned: (
+    sessionID: SessionID,
+    agentID: string,
+    onInterrupt: Effect.Effect<MessageV2.WithParts>,
+    work: Effect.Effect<MessageV2.WithParts>,
+  ) => Effect.Effect<{ readonly runId: number; readonly interruptOwned: Effect.Effect<void> }, Session.BusyError>
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
   readonly cancelActor: (sessionID: SessionID, agentID: string) => Effect.Effect<void>
   readonly ensureRunning: (
@@ -18,6 +25,13 @@ export interface Interface {
     onInterrupt: Effect.Effect<MessageV2.WithParts>,
     work: Effect.Effect<MessageV2.WithParts>,
   ) => Effect.Effect<MessageV2.WithParts>
+  /** [R003] Exclusive: run work only if idle; busy → BusyError. Never join. */
+  readonly ensureExclusive: (
+    sessionID: SessionID,
+    agentID: string,
+    onInterrupt: Effect.Effect<MessageV2.WithParts>,
+    work: Effect.Effect<MessageV2.WithParts>,
+  ) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
   readonly startShell: (
     sessionID: SessionID,
     onInterrupt: Effect.Effect<MessageV2.WithParts>,
@@ -132,6 +146,16 @@ export const layer = Layer.effect(
       return
     })
 
+    const startOwned: Interface["startOwned"] = Effect.fn("SessionRunState.startOwned")(function* (
+      sessionID: SessionID,
+      agentID: string,
+      onInterrupt: Effect.Effect<MessageV2.WithParts>,
+      work: Effect.Effect<MessageV2.WithParts>,
+    ) {
+      const active = yield* runner(sessionID, agentID, onInterrupt)
+      return yield* active.startOwned(withOrphanSweep(sessionID, agentID, work))
+    })
+
     // Process-group kill: session abort cancels EVERY runner under this session
     // (main + actor/subagent slices). Orchestrator is unrelated.
     //
@@ -187,6 +211,15 @@ export const layer = Layer.effect(
       return yield* (yield* runner(sessionID, agentID, onInterrupt)).ensureRunning(withOrphanSweep(sessionID, agentID, work))
     })
 
+    const ensureExclusive = Effect.fn("SessionRunState.ensureExclusive")(function* (
+      sessionID: SessionID,
+      agentID: string,
+      onInterrupt: Effect.Effect<MessageV2.WithParts>,
+      work: Effect.Effect<MessageV2.WithParts>,
+    ) {
+      return yield* (yield* runner(sessionID, agentID, onInterrupt)).ensureExclusive(work)
+    })
+
     const startShell = Effect.fn("SessionRunState.startShell")(function* (
       sessionID: SessionID,
       onInterrupt: Effect.Effect<MessageV2.WithParts>,
@@ -195,7 +228,7 @@ export const layer = Layer.effect(
       return yield* (yield* runner(sessionID, "main", onInterrupt)).startShell(work)
     })
 
-    return Service.of({ assertNotBusy, cancel, cancelActor, ensureRunning, start, startShell })
+    return Service.of({ assertNotBusy, cancel, cancelActor, ensureRunning, ensureExclusive, start, startOwned, startShell })
   }),
 )
 

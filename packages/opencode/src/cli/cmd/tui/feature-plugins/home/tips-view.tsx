@@ -87,7 +87,6 @@ const TIP_KEYS = [
   "tui.tips.disable_formatter",
   "tui.tips.custom_formatter",
   "tui.tips.lsp",
-  "tui.tips.custom_tool",
   "tui.tips.tool_scripts",
   "tui.tips.plugins",
   "tui.tips.plugin_notify",

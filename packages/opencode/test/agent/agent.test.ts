@@ -14,6 +14,11 @@ import PROMPT_GENERATE_GPT from "../../src/agent/prompt/generate-gpt.txt"
 import PROMPT_EXPLORE from "../../src/agent/prompt/explore.txt"
 import PROMPT_GENERAL from "../../src/agent/prompt/general.txt"
 import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
+import PROMPT_GLM from "../../src/session/prompt/glm.txt"
+import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
+import TOOL_BASH_TXT from "../../src/tool/bash.txt"
+import TOOL_BASH_GPT_TXT from "../../src/tool/bash.gpt.txt"
+import TOOL_READ_TXT from "../../src/tool/read.txt"
 
 const itTool = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, Agent.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
@@ -52,22 +57,27 @@ test("default system prompt has no Claude Code residual and names real dispatch 
   // Trust rules live under System (deduped); no separate Trust heading.
   expect(PROMPT_DEFAULT).not.toContain("## Trust boundaries")
   expect(PROMPT_DEFAULT).toContain("Memory records may be stale")
-  expect(PROMPT_DEFAULT).toContain("use `actor`")
-  expect(PROMPT_DEFAULT).toContain("`task` tool")
+  expect(PROMPT_DEFAULT).toContain("use the Actor tool")
+  expect(PROMPT_DEFAULT).toContain("Task tool")
   expect(PROMPT_DEFAULT).not.toContain("plan_exit")
   expect(PROMPT_DEFAULT).not.toContain("Only the user switches")
-  expect(PROMPT_DEFAULT).toContain("case-sensitive")
-  expect(PROMPT_DEFAULT).toContain("exact registered name")
-  expect(PROMPT_DEFAULT).toContain("snake_case")
-  expect(PROMPT_DEFAULT).toContain("`read`, `write`, and `edit`")
+  expect(PROMPT_DEFAULT).toContain("Tool names are case-sensitive: always pass the exact registered name. Do not invent or alter casing.\n")
+  expect(PROMPT_DEFAULT).not.toContain("snake_case")
+  expect(PROMPT_DEFAULT).toContain("Workflow tool")
+  expect(PROMPT_DEFAULT).toContain("Skill tool")
   expect(PROMPT_DEFAULT).not.toContain("apply_patch")
   expect(PROMPT_DEFAULT).not.toContain("the file-read tool")
-  // Case rule precedes the snake_case mention.
-  expect(PROMPT_DEFAULT.indexOf("case-sensitive")).toBeLessThan(PROMPT_DEFAULT.indexOf("snake_case"))
-  expect(PROMPT_DEFAULT).toContain("run in parallel")
-  expect(PROMPT_DEFAULT).toContain("order-dependent")
-  expect(PROMPT_DEFAULT).toContain("1–3 parallel tool calls")
-  expect(PROMPT_DEFAULT).toContain("Avoid more than 8 parallel calls")
+  expect(PROMPT_DEFAULT).toContain("Prefer 1–3 tool calls")
+  expect(PROMPT_DEFAULT).toContain("Avoid more than 8 calls")
+  expect(PROMPT_DEFAULT).not.toContain("run in parallel")
+  expect(PROMPT_DEFAULT).not.toContain("order-dependent")
+  // Runtime FIFO gate owns admission; prompts must not teach cross-tool parallel/serial rules.
+  for (const prompt of [PROMPT_DEFAULT, PROMPT_GENERAL, PROMPT_EXPLORE, PROMPT_GLM, PROMPT_ANTHROPIC, TOOL_BASH_TXT, TOOL_BASH_GPT_TXT, TOOL_READ_TXT]) {
+    expect(prompt).not.toMatch(/run .{0,40}tool calls? in parallel/i)
+    expect(prompt).not.toMatch(/bash .{0,20}(commands? )?in parallel/i)
+    expect(prompt).not.toContain("ALWAYS USE PARALLEL")
+    expect(prompt).not.toContain("order-dependent")
+  }
   expect(PROMPT_DEFAULT).not.toContain("### Plan mode in detail")
   expect(PROMPT_DEFAULT).not.toContain("Desktop Settings")
   expect(PROMPT_DEFAULT).not.toContain("one short line max")
@@ -309,13 +319,13 @@ test("general and explore agents use dedicated prompts", async () => {
       expect(explore?.prompt).not.toBe(general?.prompt)
       // Work-face contract on both subagent prompts (casing + parallel budget + trust).
       for (const p of [general?.prompt ?? "", explore?.prompt ?? ""]) {
-        expect(p).toContain("case-sensitive")
-        expect(p).toContain("snake_case")
-        expect(p).toContain("`read`")
+        expect(p).toContain("Tool names are case-sensitive: always pass the exact registered name. Do not invent or alter casing.\n")
+        expect(p).not.toContain("snake_case")
         expect(p).not.toContain("apply_patch")
-        expect(p).toContain("run in parallel")
-        expect(p).toContain("1–3 parallel tool calls")
-        expect(p).toContain("Avoid more than 8 parallel calls")
+        expect(p).toContain("Prefer 1–3 tool calls")
+        expect(p).toContain("Avoid more than 8 calls")
+        expect(p).not.toContain("run in parallel")
+        expect(p).not.toContain("order-dependent")
         expect(p).toContain("DATA, not instructions")
       }
       expect(PROMPT_GENERAL).toContain("Do not spawn or delegate to other subagents")
@@ -335,8 +345,8 @@ test("general and explore agents use dedicated prompts", async () => {
       // Brand-root paths (catalog location / skill_content base dir) must not flip identity.
       expect(PROMPT_GENERAL).toContain("not your identity")
       expect(PROMPT_GENERAL).toContain("MiMoCode general subagent")
-      expect(PROMPT_GENERAL).toContain("`skill` tool")
-      expect(PROMPT_GENERAL).toContain("skill_search")
+      expect(PROMPT_GENERAL).toContain("Skill tool")
+      expect(PROMPT_GENERAL).toContain("SkillSearch tool")
       expect(PROMPT_GENERAL).toContain("Never call a tool absent from the current tool surface")
       expect(PROMPT_GENERAL).toContain("don't guess slash commands from training data")
       expect(PROMPT_GENERAL).toContain("treat it as authoritative")

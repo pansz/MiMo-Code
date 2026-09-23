@@ -119,8 +119,6 @@ export const dict = {
   "tui.tips.disable_formatter": '在配置中设置 {highlight}"formatter": false{/highlight} 关闭所有自动格式化',
   "tui.tips.custom_formatter": "在配置中按文件后缀定义自定义格式化命令",
   "tui.tips.lsp": "MiMoCode 使用 LSP 服务器进行智能代码分析",
-  "tui.tips.custom_tool":
-    "在 {highlight}.mimocode/tools/{/highlight} 创建 {highlight}.ts{/highlight} 文件定义新的 LLM 工具",
   "tui.tips.tool_scripts": "工具定义可以调用 Python、Go 等脚本",
   "tui.tips.plugins":
     "在 {highlight}.mimocode/plugin/{/highlight} 添加 {highlight}.ts{/highlight} 文件挂接事件钩子",
@@ -199,7 +197,6 @@ export const dict = {
   "tui.skill.pdf-official.description": "创建、编辑、转换、读取 PDF 文件",
   "tui.skill.pptx-official.description": "创建、编辑、读取 Microsoft PowerPoint (.pptx) 演示文稿",
   "tui.skill.mimocode.description": "MiMoCode 功能、配置与命令的自文档参考",
-  "tui.skill.evolve.description": "改写自身的一切——工具、行为钩子、知识、工作流，乃至界面本身",
   "tui.skill.loop.description": "按固定周期循环运行提示词",
   "tui.skill.html-to-video-pipeline.description": "短视频神器 - 利用 HTML 制作短视频",
   "tui.skill.arxiv.description": "搜索、引用、下载与追踪 arXiv 论文",
@@ -236,7 +233,6 @@ export const dict = {
   "tui.skill.pdf-official.slash": "PDF文档",
   "tui.skill.pptx-official.slash": "PPT演示",
   "tui.skill.mimocode.slash": "MiMoCode文档",
-  "tui.skill.evolve.slash": "自我进化",
   "tui.skill.loop.slash": "循环任务",
   "tui.skill.html-to-video-pipeline.slash": "HTML转视频",
   "tui.skill.arxiv.slash": "论文搜索",
@@ -590,6 +586,7 @@ export const dict = {
   // Session badges
   "tui.session.badge.auto": "自动",
   "tui.session.actor_warning": "警告",
+  "tui.session.inbox.from": "来自 {{from}} 的消息",
   "tui.session.actor_status.completed": "子代理已完成",
   "tui.session.actor_status.failed": "子代理失败",
   "tui.session.actor_status.cancelled": "子代理已取消",

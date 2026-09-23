@@ -1,3 +1,4 @@
+import { toolPresentationProgress } from "./tool-progress"
 import { dynamicTool, type Tool, jsonSchema, type JSONSchema7 } from "ai"
 import { childProcessEnv } from "@/util/child-process-env"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
@@ -34,6 +35,7 @@ import { InstanceState } from "@/effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import { McpSampling } from "./sampling"
+import { McpElicitation } from "./elicitation"
 import { SessionID } from "@/session/schema"
 
 const log = Log.create({ service: "mcp" })
@@ -105,6 +107,7 @@ export const CLIENT_OPTIONS = {
     // `sampling.context` are NOT implemented, and declaring them would invite
     // servers to send `tools`/`includeContext` payloads we would have to reject.
     sampling: {},
+    elicitation: { form: {} },
     experimental: {
       [TURN_LIFECYCLE_CAPABILITY]: { version: TURN_LIFECYCLE_VERSION },
     },
@@ -360,7 +363,7 @@ function isMcpConfigured(entry: McpEntry): entry is ConfigMCP.Info {
 const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_")
 
 // Convert MCP tool definition to AI SDK Tool type
-function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number, context?: TurnContext): Tool {
+export function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number, context?: TurnContext): Tool {
   const inputSchema = mcpTool.inputSchema
 
   // Spread first, then override type to ensure it's always "object"
@@ -380,19 +383,27 @@ function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number
       // Recorded before the call so a `sampling/createMessage` arriving WHILE
       // this call is in flight can address its approval prompt at this session.
       if (context) McpSampling.setActiveSession(client, SessionID.make(context.sessionId))
-      return client.callTool(
-        {
-          name: mcpTool.name,
-          arguments: (args || {}) as Record<string, unknown>,
-          ...metadata,
-        },
-        CallToolResultSchema,
-        {
-          resetTimeoutOnProgress: true,
-          signal: options.abortSignal,
-          timeout,
-        },
-      )
+      const progress = toolPresentationProgress(options.experimental_context)
+      const finish = McpElicitation.beginCall(client, context?.sessionId, options.abortSignal)
+      try {
+        return await client.callTool(
+          {
+            name: mcpTool.name,
+            arguments: (args || {}) as Record<string, unknown>,
+            ...metadata,
+          },
+          CallToolResultSchema,
+          {
+            resetTimeoutOnProgress: true,
+            onprogress: progress.update,
+            signal: options.abortSignal,
+            timeout,
+          },
+        )
+      } finally {
+        finish()
+        await progress.drain()
+      }
     },
   })
 }
@@ -795,13 +806,18 @@ export const layer = Layer.effect(
       // Bind the effective policy for this generation so host deny is not
       // re-resolved from user config alone at sampling time.
       McpSampling.serve(name, client, bridge, undefined, undefined, sampling)
+      McpElicitation.serve(name, client, bridge)
     }
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("MCP.state")(function* () {
         const cfg = yield* cfgSvc.get()
-        const bridge = yield* EffectBridge.make()
+        // Snapshot config and per-name revisions in one sync block so identity
+        // always pairs the same generation with the same config object (R009).
         const host = HostMcp.get()
+        const hostRevisions = new Map(
+          Object.keys(host).map((name) => [name, HostMcp.revisionOf(name)] as const),
+        )
         const config = { ...cfg.mcp, ...host }
         const s: State = {
           host: Object.fromEntries(Object.entries(host).map(([key, value]) => [key, JSON.stringify(value)])),
@@ -827,16 +843,28 @@ export const layer = Layer.effect(
                 return
               }
 
-              const result = yield* create(key, mcp).pipe(Effect.catch(() => Effect.void))
+              const fromHost = key in host
+              const hostRevision = hostRevisions.get(key)
+              const result = yield* create(key, mcp, { fromHost, hostRevision }).pipe(Effect.catch(() => Effect.void))
               if (!result) return
 
-              s.status[key] = result.status
-              if (key in host && result.status.status === "failed") s.hostRetryAt[key] = Date.now() + 5000
               if (result.mcpClient) {
-                s.clients[key] = result.mcpClient
-                s.defs[key] = result.defs!
-                watch(s, key, result.mcpClient, bridge, mcp.timeout, hostEffectiveSampling(mcp, key in host))
+                // Status is written only on successful admit/commit (R013).
+                // Pre-writing connected would survive a reject-stale discard.
+                yield* storeClient(
+                  s,
+                  key,
+                  result.mcpClient,
+                  result.defs!,
+                  mcp.timeout,
+                  hostEffectiveSampling(mcp, fromHost),
+                  { fromHost, hostRevision },
+                )
+                return
               }
+
+              s.status[key] = result.status
+              if (fromHost && result.status.status === "failed") s.hostRetryAt[key] = Date.now() + 5000
             }),
           { concurrency: "unbounded" },
         )
@@ -976,13 +1004,16 @@ export const layer = Layer.effect(
       const discardAttempt = (fallback: Status) =>
         releaseMcpClient(client).pipe(Effect.as(s.status[name] ?? fallback))
 
+      // reject-stale means a newer generation owns the name. Report that live
+      // status when present; never fabricate "connected" if none is stored.
+      const staleFallback: Status = { status: "disabled" }
       const first = admit()
       if (first !== "ok") {
-        return yield* discardAttempt(first === "reject-stale" ? ({ status: "connected" } as Status) : ({ status: "disabled" } as Status))
+        return yield* discardAttempt(first === "reject-stale" ? staleFallback : ({ status: "disabled" } as Status))
       }
       const second = admit()
       if (second !== "ok") {
-        return yield* discardAttempt(second === "reject-stale" ? ({ status: "connected" } as Status) : ({ status: "disabled" } as Status))
+        return yield* discardAttempt(second === "reject-stale" ? staleFallback : ({ status: "disabled" } as Status))
       }
       // Commit first, then release the previous client (R002). Closing previous
       // before commit can leave a dead registry entry if admission is refused.

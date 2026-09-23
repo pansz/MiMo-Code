@@ -980,12 +980,18 @@ export type OutputFormatJsonSchema = {
 
 export type OutputFormat = OutputFormatText | OutputFormatJsonSchema
 
-export type Provenance = {
+export type HookProvenance = {
   hookPhase: "pre" | "post"
   hookIteration: number
   pluginNames: Array<string>
   hookIDs: Array<string>
 }
+
+export type MachineProvenance = {
+  machine: string
+}
+
+export type Provenance = HookProvenance | MachineProvenance
 
 export type UserMessage = {
   id: string
@@ -2719,15 +2725,6 @@ export type Config = {
      */
     cc_index?: boolean
   }
-  /**
-   * Trajectory (conversation history) FTS index configuration.
-   */
-  history?: {
-    /**
-     * Which part kinds the history FTS index should cover. Defaults to text (user/assistant) + tool input + tool errors. Add 'reasoning' or 'tool_output' to grow recall at the cost of database size. Note: enabling 'tool_output' reclassifies completed tools from kind='tool_input' to kind='tool_output' (input remains searchable in the body, but kind:['tool_input'] filter will then only match pending/error tools).
-     */
-    kinds?: Array<"user_text" | "assistant_text" | "tool_input" | "tool_error" | "reasoning" | "tool_output">
-  }
   dream?: {
     /**
      * Auto-trigger dream memory consolidation on new session start. Default: false.
@@ -2816,6 +2813,15 @@ export type Config = {
        * Max assistant messages cropped from the trailing streak (default 64).
        */
       max_span?: number
+    }
+    /**
+     * Turn-end uncommitted-changes soft hint (experimental).
+     */
+    uncommitted_hint?: {
+      /**
+       * After a completed user-source main turn, if the session workspace has uncommitted git changes, inject a soft hint (may repeat on later dirty user turns; hook turns never re-inject; does not force a commit). Default off.
+       */
+      enabled?: boolean
     }
     /**
      * Timeout in milliseconds for model context protocol (MCP) requests
@@ -5530,11 +5536,19 @@ export type SessionRecoveryResponses = {
   /**
    * Recovery candidates
    */
-  200: Array<{
-    assistantMessageID: string
-    parentMessageID: string
-    created: number
-  }>
+  200: Array<
+    | {
+        kind: "assistant"
+        assistantMessageID: string
+        parentMessageID: string
+        created: number
+      }
+    | {
+        kind: "parent-user"
+        userMessageID: string
+        created: number
+      }
+  >
 }
 
 export type SessionRecoveryResponse = SessionRecoveryResponses[keyof SessionRecoveryResponses]
@@ -5575,6 +5589,49 @@ export type SessionResumeErrors = {
 export type SessionResumeError = SessionResumeErrors[keyof SessionResumeErrors]
 
 export type SessionResumeResponses = {
+  /**
+   * Resume accepted
+   */
+  202: unknown
+}
+
+export type SessionResumeUserData = {
+  body?: {
+    userMessageID?: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+    agentID?: string
+    task_id?: string
+    titleLocale?: string
+    modelProviderID?: string
+    modelID?: string
+  }
+  url: "/session/{sessionID}/resume"
+}
+
+export type SessionResumeUserErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+  /**
+   * Conflict — session resource is busy
+   */
+  409: ConflictError
+}
+
+export type SessionResumeUserError = SessionResumeUserErrors[keyof SessionResumeUserErrors]
+
+export type SessionResumeUserResponses = {
   /**
    * Resume accepted
    */
@@ -5664,6 +5721,8 @@ export type SessionCommandData = {
     messageID?: string
     agent?: string
     model?: string
+    source?: "user" | "spawn" | "hook"
+    provenance?: Provenance
     arguments: string
     command: string
     /**

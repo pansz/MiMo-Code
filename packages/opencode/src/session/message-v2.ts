@@ -1334,6 +1334,11 @@ export function fromError(
       return new AbortedError({ message: e.message }, { cause: e }).toObject()
     case ProviderError.isAbortError(e):
       return new AbortedError({ message: errorMessage(e) }, { cause: e }).toObject()
+    // Session-level abort (user stop / cancel): any residual stream error — including
+    // undici UND_ERR_ABORTED which is otherwise transport-retryable — is user abort.
+    // Without this, stop is reclassified as network and auto-resume reopens the turn.
+    case ctx.aborted === true:
+      return new AbortedError({ message: errorMessage(e) || "Aborted" }, { cause: e }).toObject()
     // The AI SDK wraps the real failure in AI_RetryError after exhausting its
     // own maxRetries. Unwrap to the underlying error (.lastError) so the
     // APICallError branch below can extract statusCode/isRetryable/responseBody.
@@ -1432,12 +1437,41 @@ export function fromError(
       const parsed = ProviderError.parseStreamError(e)
       if (parsed) return fromParsedStreamError(parsed, e)
       const message = e instanceof TypeError ? `TypeError: ${errorMessage(e)}` : errorMessage(e)
+      // Preserve HTTP status on plain Errors (mock SDK / undici shapes carry
+      // `.status`). Dropping it collapses a 400 into UnknownError, which
+      // SessionRetry then treats as uncatalogued and retries forever.
+      const rawStatus =
+        (e as { statusCode?: unknown }).statusCode ?? (e as { status?: unknown }).status
+      const statusCode =
+        typeof rawStatus === "number" && Number.isFinite(rawStatus)
+          ? rawStatus
+          : typeof rawStatus === "string" && /^\d+$/.test(rawStatus)
+            ? Number.parseInt(rawStatus, 10)
+            : undefined
+      if (statusCode != null) {
+        return new APIError(
+          {
+            message,
+            statusCode,
+            isRetryable: statusCode >= 500 && statusCode !== 501 && statusCode !== 505,
+            metadata: causeMetadata(e),
+          },
+          { cause: e },
+        ).toObject()
+      }
       return new NamedError.Unknown({ message }, { cause: e }).toObject()
     }
     default: {
       const parsed = ProviderError.parseStreamError(e)
       if (parsed) return fromParsedStreamError(parsed, e)
-      return new NamedError.Unknown({ message: JSON.stringify(e) ?? String(e) }, { cause: e }).toObject()
+      // 字符串直接用原文:JSON.stringify("Internal Server Error") 会多包一层引号,
+      // 让 SessionRetry/desktop isOpaqueError 精确匹配失效,错误卡把带引号原文吐给用户。
+      // 对象仍 stringify 保诊断;undefined/null 走 String()。
+      const message =
+        typeof e === "string"
+          ? e
+          : (JSON.stringify(e) ?? String(e))
+      return new NamedError.Unknown({ message }, { cause: e }).toObject()
     }
   }
 }

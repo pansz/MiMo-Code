@@ -28,7 +28,7 @@ MiMoCode (CLI binary `mimo`) is an agentic coding tool with a terminal UI, built
 | **Distill** | Packages repeated manual workflows into skills/subagents/commands | `/distill` |
 | **Scheduled prompts** | Cron/loop: inject a prompt on a schedule or repeating loop (UTC, 5-field) | `cron` tool · `/loop` · `/loops` |
 | **Dynamic workflows** | JS scripts that orchestrate many subagents deterministically (fan-out, pipelines, nesting); built-ins include `compose`, `deep-research`, `fact-check`, and `research-experiment` | `.mimocode/workflows/*.js` + `workflow` tool |
-| **Skills / self-extension** | Add tools, hooks, skills under `.mimocode/` | see the `evolve` skill |
+| **Custom skills** | Add reusable task instructions under `.mimocode/skills/` | see the `skill-creator` skill |
 | **Skill discovery** | `/skill-name` slash invocation (2+ in one message auto-load with an orchestration plan); `skill_search` tool matches by exact name/alias + BM25 and auto-loads high-confidence hits; some builtins (`claude-code`, `codex`) only appear when their CLI is installed | `/` autocomplete · automatic |
 | **MCP** | Local & remote Model Context Protocol servers | `mcp` config + `mimo mcp` |
 | **Capability API** | Every session already serves this project's chat models over OpenAI-compatible `/v1` on a loopback port, so a skill or subprocess borrows a model instead of a provider key | `mimo llm-server issue` mints a scoped token and prints the base URL (see @reference/capability-api.md) |
@@ -92,11 +92,11 @@ When asked to change a behavior:
 6. When persisting a newly supplied API key and model, also put that exact `provider/model` at the front of the TUI recent-model state so the user can switch to it immediately. Follow the merge procedure in @reference/providers.md; never replace favorites, variants, or unrelated recent models.
 7. Validate the parsed configuration with the narrowest relevant command and report the config and recent-model state files changed, selected provider/model, and whether a new session or re-selection is needed. Never include the credential in the summary.
 
-Don't invent config keys, model limits, context windows, output limits, modalities, reasoning support, or tool-call capabilities. Add optional model metadata only when the user supplied it or a current authoritative source verifies it. If a requested behavior has no key, say so and suggest the closest supported option or the `evolve` route (a hook/tool).
+Don't invent config keys, model limits, context windows, output limits, modalities, reasoning support, or tool-call capabilities. Add optional model metadata only when the user supplied it or a current authoritative source verifies it. If a requested behavior has no key, say so and suggest the closest supported option.
 
 ## Answering Feature Questions
 
 - Confirm the feature exists in the map above before describing it.
 - Give the trigger (command / key / config), then a one-line how.
-- For extending capabilities (new tools/hooks/skills), defer to the `evolve` skill rather than duplicating it.
+- For authoring reusable task instructions, use the `skill-creator` skill.
 - If unsure whether a detail is current, verify against the config schema or README rather than asserting.

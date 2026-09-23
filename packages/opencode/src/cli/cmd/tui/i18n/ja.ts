@@ -136,8 +136,6 @@ export const dict = {
     '設定で {highlight}"formatter": false{/highlight} にするとすべての自動整形を無効化できます',
   "tui.tips.custom_formatter": "拡張子ごとのカスタム整形コマンドを設定で定義できます",
   "tui.tips.lsp": "MiMoCode はインテリジェントなコード解析に LSP サーバを使います",
-  "tui.tips.custom_tool":
-    "{highlight}.mimocode/tools/{/highlight} に {highlight}.ts{/highlight} ファイルを作って新しい LLM ツールを定義します",
   "tui.tips.tool_scripts": "ツール定義から Python、Go などのスクリプトを呼び出せます",
   "tui.tips.plugins":
     "{highlight}.mimocode/plugin/{/highlight} に {highlight}.ts{/highlight} ファイルを追加してイベントフックを実装できます",
@@ -222,7 +220,6 @@ export const dict = {
   "tui.skill.pdf-official.description": "PDF ファイルの作成・編集・変換・読み取り",
   "tui.skill.pptx-official.description": "Microsoft PowerPoint (.pptx) スライドの作成・編集・読み取り",
   "tui.skill.mimocode.description": "MiMoCode の機能・設定・コマンドに関するセルフドキュメント",
-  "tui.skill.evolve.description": "自身のあらゆる層を書き換える——ツール、フック、知識、ワークフロー、UIまで",
   "tui.skill.loop.description": "プロンプトを一定間隔で繰り返し実行するようスケジュール",
   "tui.skill.html-to-video-pipeline.description": "ショート動画の神ツール - HTML でショート動画を制作",
   "tui.skill.arxiv.description": "arXiv 論文の検索・引用・ダウンロード・追跡",

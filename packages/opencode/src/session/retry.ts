@@ -1,4 +1,4 @@
-import type { NamedError } from "@mimo-ai/shared/util/error"
+import { NamedError } from "@mimo-ai/shared/util/error"
 import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
 import { ProviderError } from "@/provider"
@@ -354,6 +354,15 @@ export function decide(
   if (signals.code === "stream_read_error" || signals.type === "upstream_error")
     return retry("stream", "stream", signals.message || "Upstream stream read failed")
   if (ProviderError.isRetryableNetworkError(error)) return retry("network")
+  // fromError(ETIMEDOUT) → APIError("Request timed out")：cause 链可能在 JSON 往返后丢失，
+  // 此时 isRetryableNetworkError 认不出，会掉进 unknown(8 次/15min) 甚至 terminal。
+  // provider 超时必须 persist：按 message / metadata.code 钉回 network。
+  if (
+    MessageV2.APIError.isInstance(error) &&
+    error.data.metadata?.code === "ETIMEDOUT"
+  )
+    return retry("network", phase, error.data.message)
+  if (/\brequest timed out\b/i.test(message) || /\betimedout\b/i.test(message)) return retry("network", phase, message)
   if (message === SSE_TIMEOUT_MESSAGE) return retry("stream", "stream", message)
   if (
     signals.type === "too_many_requests" ||
@@ -372,6 +381,14 @@ export function decide(
     if (status === 400 || status === 401 || status === 403 || status === 422) return terminal()
     if (error.data.isRetryable) return retry("unknown")
   }
+  // UnknownError = fromError catch-all (including 5xx that lost statusCode).
+  // Uncatalogued ≠ proven terminal: retryable under a bounded budget, then terminal.
+  // True terminals stay blocked above: Aborted / Auth / ContextOverflow / 402 / 501 / 505 / 404 / quota.
+  // Budget is phase-sensitive via budgetFor (retry-coordinator.md §Scope):
+  //   request phase → request budget (default 4 / 30s; scope table: request applies to
+  //     recoverable non-network/rate_limit/server kinds such as unknown);
+  //   stream/live-step → unknown budget (default 8 / 15min).
+  if (NamedError.Unknown.isInstance(error)) return retry("unknown")
   return terminal()
 }
 

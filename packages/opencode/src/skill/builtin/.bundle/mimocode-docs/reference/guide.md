@@ -169,4 +169,4 @@ The `cron` tool has six verbs:
 
 ## Extending MiMoCode
 
-To add tools, hooks, or skills, use the `evolve` skill — it covers writing `.mimocode/tools/*.ts`, `.mimocode/hooks/*.ts`, and `.mimocode/skills/*/SKILL.md`, all hot-reloaded on the next turn.
+To add reusable task instructions, use the `skill-creator` skill and save them under `.mimocode/skills/<name>/SKILL.md`. For additional tools, configure an MCP server or use the plugin API.

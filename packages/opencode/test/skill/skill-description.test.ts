@@ -11,7 +11,7 @@ import { dict as zht } from "../../src/cli/cmd/tui/i18n/zht"
 describe("skillDescription", () => {
   const t = (key: string) => {
     const translations: Record<string, string> = {
-      "tui.skill.evolve.description": "Translated evolve description",
+      "tui.skill.example.description": "Translated example description",
       "tui.skill.compose:plan.description": "Translated compose plan",
     }
     return translations[key] as string
@@ -22,11 +22,11 @@ describe("skillDescription", () => {
   })
 
   test("returns fallback when bundled is undefined", () => {
-    expect(skillDescription(t, "evolve", "Fallback")).toBe("Fallback")
+    expect(skillDescription(t, "example", "Fallback")).toBe("Fallback")
   })
 
   test("returns translation for bundled builtin skill", () => {
-    expect(skillDescription(t, "evolve", "Fallback", true)).toBe("Translated evolve description")
+    expect(skillDescription(t, "example", "Fallback", true)).toBe("Translated example description")
   })
 
   test("returns translation for bundled compose skill", () => {
@@ -38,7 +38,7 @@ describe("skillDescription", () => {
   })
 
   test("user override: same name as builtin but not bundled shows fallback", () => {
-    expect(skillDescription(t, "evolve", "User custom evolve", false)).toBe("User custom evolve")
+    expect(skillDescription(t, "example", "User custom example", false)).toBe("User custom example")
   })
 
   test("returns localized slash aliases only for bundled skills", () => {
