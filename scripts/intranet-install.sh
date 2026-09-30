@@ -290,7 +290,11 @@ discover_version() {
   "$scratch/$ASSET" --version 2>/dev/null | tr -d '\r' | head -1
 }
 TMP_PROBE="$(mktemp -d)"
-trap 'rm -rf "$TMP" "$TMP_PROBE"' EXIT
+# TMP is assigned only further down (the download step), so the short-circuit
+# exit below can fire before it exists. Under `set -u` an unbound $TMP in this
+# trap aborts the trap and bash reports 1 instead of the intended 0 — which
+# makes "already installed" look like a failure to anything checking status.
+trap 'rm -rf "${TMP:-}" "$TMP_PROBE"' EXIT
 specific_version="$(discover_version "$TMP_PROBE" || echo unknown)"
 if [[ -x "$BIN_DIR/mimo" && "$force" != "true" ]]; then
   installed_version="$("$BIN_DIR/mimo" --version 2>/dev/null || echo unknown)"
