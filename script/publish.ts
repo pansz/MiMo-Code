@@ -1,6 +1,11 @@
 #!/usr/bin/env bun
+// Channel 3/3 (npm): stamp Script.version across package.json files, then
+// publish @mimo-ai/cli + platform binaries, @mimo-ai/sdk, and @mimo-ai/plugin.
+// Called by script/release.ts after the build step.
+//
+// Env: npm auth (npm login / NPM_TOKEN), version via script/meta.ts.
 
-import { Script } from "@mimo-ai/script"
+import { Script } from "./meta.ts"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
 
@@ -23,13 +28,13 @@ for (const file of pkgjsons) {
 }
 
 await $`bun install`
-await $`./packages/sdk/js/script/build.ts`
+await $`./packages/sdk/script/build.ts`
 
 console.log("\n=== cli ===\n")
-await $`bun ./packages/opencode/script/publish.ts`
+await $`bun ./packages/cli/script/publish.ts`
 
 console.log("\n=== sdk ===\n")
-await $`bun ./packages/sdk/js/script/publish.ts`
+await $`bun ./packages/sdk/script/publish.ts`
 
 console.log("\n=== plugin ===\n")
 await $`bun ./packages/plugin/script/publish.ts`

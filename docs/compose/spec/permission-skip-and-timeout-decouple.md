@@ -12,7 +12,7 @@ commits: 9d54ad3c..HEAD
 
 **What was built** — Split the monolithic `skipAll` boolean into two orthogonal runtime flags: `skipAll` (auto-allow normal permission asks) and `permissionAskTimeoutMs` (timeout for all human-confirmation asks). Added `/permission-timeout` TUI slash command with a modal selector (Never/30s/1min/2min/5min/10min), server API endpoints, and full i18n coverage across 7 languages.
 
-**Verification** — All 147 permission tests pass (`bun test test/permission/` from `packages/opencode`). 5 new tests cover: env var compat, independent timeout (skip-all off), timeout on normal asks, null timeout (no timeout), skip-all+timeout combination.
+**Verification** — All 147 permission tests pass (`bun test test/permission/` from `packages/cli`). 5 new tests cover: env var compat, independent timeout (skip-all off), timeout on normal asks, null timeout (no timeout), skip-all+timeout combination.
 
 **Journey log** — SDK regeneration (`./packages/sdk/js/script/build.ts`) is required when adding new server API endpoints; stale toast messages referencing old coupled behavior were found during review and fixed.
 
@@ -109,7 +109,7 @@ New keys across all 7 languages (en/zh/zht/ru/ja/fr/es):
 - `autoApproveDelete` mechanism (already an independent toggle).
 - `--dangerously-skip-permissions` CLI flag behavior (injects allow-all via config ruleset, bypasses skipAll runtime toggle).
 - `FORCED_ASK` permission set definition.
-- Parent-grant inheritance or orchestrator-peer forward timeout logic (`FORWARD_DENY_TIMEOUT_MS` remains independent).
+- Parent-grant inheritance.
 - Persisting `permissionAskTimeoutMs` to the database (runtime-only, same as skipAll).
 
 ## Tasks
