@@ -54,6 +54,7 @@ import type {
   FindTextResponses,
   FormatterStatusResponses,
   GlobalConfigGetResponses,
+  GlobalConfigStatusResponses,
   GlobalConfigUpdateErrors,
   GlobalConfigUpdateResponses,
   GlobalDisposeResponses,
@@ -286,6 +287,23 @@ class HeyApiRegistry<T> {
 }
 
 export class Config extends HeyApiClient {
+  /**
+   * Get configuration application status
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<GlobalConfigStatusResponses, unknown, ThrowOnError>({
+      url: "/global/config/status",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * Get global configuration
    *
