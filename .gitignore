@@ -59,3 +59,14 @@ Thumbs.db
 
 # others
 codex/
+
+# Intentionally untracked local files. Ignoring them keeps `git status` clean
+# AND protects them from `git clean -fd`, which skips ignored files unless -x.
+/LOCAL_CHANGES.md
+/docs/issues/
+/mimocode-linux-x64.tar.gz
+
+# Leftover from upstream's packages/opencode -> packages/cli rename (fab962f3):
+# dist, node_modules, models-snapshot artifacts and stale test fixtures. Drop
+# this rule if upstream ever restores the packages/opencode path.
+/packages/opencode/
